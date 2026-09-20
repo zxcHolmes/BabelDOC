@@ -99,6 +99,9 @@ class BaseTranslator(ABC):
 
         self.translate_call_count = 0
         self.translate_cache_call_count = 0
+        # Per-run results from prefill_batch(); see that method. Keyed by the
+        # exact text translate() will be called with.
+        self._prefilled = {}
 
     def __del__(self):
         with contextlib.suppress(Exception):
@@ -124,6 +127,10 @@ class BaseTranslator(ABC):
         :return: translated text
         """
         self.translate_call_count += 1
+        prefilled = self._prefilled.pop(text, None)
+        if prefilled is not None:
+            self.translate_cache_call_count += 1
+            return prefilled
         if not (self.ignore_cache or ignore_cache):
             try:
                 cache = self.cache.get(text)
@@ -137,6 +144,62 @@ class BaseTranslator(ABC):
         if not (self.ignore_cache or ignore_cache):
             self.cache.set(text, translation)
         return translation
+
+    def prefill_batch(self, texts: list[str]) -> None:
+        """Optionally translate many paragraphs in one call, filling the cache.
+
+        The engine is asked once per paragraph, which suits a network API where
+        requests run concurrently. A local model is usually serialized, so the
+        per-request overhead dominates and batching is worth far more than
+        concurrency. An engine that implements do_translate_batch gets one call
+        per page here; every later per-paragraph translate() then hits the cache.
+
+        Best effort by design: anything that fails or comes back the wrong
+        length is simply not cached, and the paragraph is translated normally.
+
+        Results are held in a per-run dictionary rather than the persistent
+        cache, so this works for engines built with ignore_cache=True and never
+        leaks a translation into another document's cache.
+        """
+        if not texts:
+            return
+        batch = getattr(self, "do_translate_batch", None)
+        if batch is None:
+            return
+        pending = []
+        for text in texts:
+            if text in self._prefilled:
+                continue
+            try:
+                if not self.ignore_cache and self.cache.get(text) is not None:
+                    continue
+            except Exception as e:  # noqa: BLE001
+                logger.debug(f"cache lookup failed during prefill: {e}")
+            pending.append(text)
+        if not pending:
+            return
+        try:
+            results = batch(pending)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"batch translation failed, falling back: {e}")
+            return
+        if not isinstance(results, list) or len(results) != len(pending):
+            logger.warning(
+                "batch translation returned %s results for %s inputs, falling back",
+                len(results) if isinstance(results, list) else type(results),
+                len(pending),
+            )
+            return
+        for text, translation in zip(pending, results, strict=True):
+            if not isinstance(translation, str) or not translation:
+                continue
+            self._prefilled[text] = translation
+            if self.ignore_cache:
+                continue
+            try:
+                self.cache.set(text, translation)
+            except Exception as e:  # noqa: BLE001
+                logger.debug(f"cache store failed during prefill: {e}")
 
     def llm_translate(self, text, ignore_cache=False, rate_limit_params: dict = None):
         """

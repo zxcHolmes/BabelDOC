@@ -8,7 +8,13 @@ from pathlib import Path
 
 __version__ = "0.6.4"
 
-CACHE_FOLDER = Path.home() / ".cache" / "babeldoc"
+# BABELDOC_CACHE_DIR lets an embedding application point the asset cache at a
+# directory it ships itself. Without it the fonts and layout model are
+# downloaded on first use, which an offline or packaged build cannot do.
+# Unset, the behaviour is unchanged.
+CACHE_FOLDER = Path(
+    os.environ.get("BABELDOC_CACHE_DIR") or Path.home() / ".cache" / "babeldoc"
+)
 
 
 def get_cache_file_path(filename: str, sub_folder: str | None = None) -> Path:

@@ -441,6 +441,50 @@ class ILTranslator:
                     return paragraph
         return None
 
+    def prefill_page(self, page: Page):
+        """Translate this page's paragraphs in one call, if the engine can.
+
+        Collects the same text that translate_paragraph would send, using
+        get_translate_input, which reads the paragraph without touching it or
+        the tracker. The results land in the engine's cache, so the normal
+        per-paragraph path below runs unchanged and simply gets cache hits.
+
+        Entirely optional: engines without do_translate_batch, and any failure
+        here, leave the per-paragraph behaviour exactly as it was.
+        """
+        if not hasattr(self.translate_engine, "prefill_batch"):
+            return
+        if self.support_llm_translate:
+            # The LLM path builds a per-paragraph prompt with title context,
+            # which a flat batch cannot reproduce.
+            return
+        try:
+            page_font_map = {font.font_id: font for font in page.pdf_font}
+            xobj_font_map = {}
+            for xobj in page.pdf_xobject:
+                xobj_font_map[xobj.xobj_id] = page_font_map.copy()
+                for font in xobj.pdf_font:
+                    xobj_font_map[xobj.xobj_id][font.font_id] = font
+
+            disable_rich_text = self.translation_config.disable_rich_text_translate
+            if not self.support_llm_translate:
+                disable_rich_text = True
+
+            texts = []
+            for paragraph in page.pdf_paragraph:
+                if paragraph.vertical:
+                    continue
+                fonts = xobj_font_map.get(paragraph.xobj_id, page_font_map)
+                translate_input = self.get_translate_input(
+                    paragraph, fonts, disable_rich_text
+                )
+                if translate_input and translate_input.unicode:
+                    texts.append(translate_input.unicode)
+            if texts:
+                self.translate_engine.prefill_batch(texts)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"page prefill failed, translating one by one: {e}")
+
     def process_page(
         self,
         page: Page,
@@ -449,6 +493,7 @@ class ILTranslator:
         tracker: PageTranslateTracker = None,
     ):
         self.translation_config.raise_if_cancelled()
+        self.prefill_page(page)
         for paragraph in page.pdf_paragraph:
             page_font_map = {}
             for font in page.pdf_font:
