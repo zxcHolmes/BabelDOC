@@ -21,7 +21,7 @@ from babeldoc.babeldoc_exception.BabelDOCException import ExtractTextError
 from babeldoc.babeldoc_exception.BabelDOCException import (
     InputFileGeneratedByBabelDOCError,
 )
-from babeldoc.const import CACHE_FOLDER
+from babeldoc.const import DATA_FOLDER
 from babeldoc.const import WATERMARK_VERSION
 from babeldoc.const import close_process_pool
 from babeldoc.format.pdf.document_il import il_version_1
@@ -1163,11 +1163,11 @@ def download_font_assets():
 
 def create_cache_folder():
     try:
-        logger.debug(f"create cache folder at {CACHE_FOLDER}")
-        Path(CACHE_FOLDER).mkdir(parents=True, exist_ok=True)
+        logger.debug(f"create data folder at {DATA_FOLDER}")
+        Path(DATA_FOLDER).mkdir(parents=True, exist_ok=True)
     except OSError:
         logger.critical(
-            f"Failed to create cache folder at {CACHE_FOLDER}",
+            f"Failed to create data folder at {DATA_FOLDER}",
             exc_info=True,
         )
         exit(1)

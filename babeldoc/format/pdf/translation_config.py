@@ -7,7 +7,7 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
-from babeldoc.const import CACHE_FOLDER
+from babeldoc.const import DATA_FOLDER
 from babeldoc.format.pdf.split_manager import BaseSplitStrategy
 from babeldoc.format.pdf.split_manager import PageCountStrategy
 from babeldoc.glossary import Glossary
@@ -286,7 +286,7 @@ class TranslationConfig:
 
         if working_dir is None:
             if debug:
-                working_dir = Path(CACHE_FOLDER) / "working" / Path(input_file).stem
+                working_dir = Path(DATA_FOLDER) / "working" / Path(input_file).stem
                 self._is_temp_dir = False
             else:
                 working_dir = tempfile.mkdtemp()

@@ -4,13 +4,13 @@ import re
 from pathlib import Path
 
 import orjson
-from babeldoc.const import CACHE_FOLDER
+from babeldoc.const import DATA_FOLDER
 from babeldoc.format.pdf.document_il.utils.formular_helper import is_formulas_font
 from babeldoc.format.pdf.translation_config import TranslationConfig
 from rich.console import Console
 from rich.table import Table
 
-WORKING_FOLDER = Path(CACHE_FOLDER) / "working"
+WORKING_FOLDER = Path(DATA_FOLDER) / "working"
 
 
 def find_latest_il_json() -> Path | None:

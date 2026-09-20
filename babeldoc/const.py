@@ -16,6 +16,18 @@ CACHE_FOLDER = Path(
     os.environ.get("BABELDOC_CACHE_DIR") or Path.home() / ".cache" / "babeldoc"
 )
 
+# Where anything written at run time goes: the translation cache database, and
+# assets fetched on demand. It defaults to CACHE_FOLDER, so nothing changes
+# unless it is set.
+#
+# The two are separate because CACHE_FOLDER may be read-only. A packaged app
+# ships the fonts and layout model inside its own install directory — under
+# MSIX that directory cannot be written to, and creating cache.v1.db there
+# fails with "unable to open database file".
+DATA_FOLDER = Path(
+    os.environ.get("BABELDOC_DATA_DIR") or CACHE_FOLDER
+)
+
 
 def get_cache_file_path(filename: str, sub_folder: str | None = None) -> Path:
     if sub_folder is not None:
@@ -46,7 +58,15 @@ except (OSError, FileNotFoundError, subprocess.CalledProcessError):
     WATERMARK_VERSION = f"v{__version__}"
 
 TIKTOKEN_CACHE_FOLDER = CACHE_FOLDER / "tiktoken"
-TIKTOKEN_CACHE_FOLDER.mkdir(parents=True, exist_ok=True)
+if not TIKTOKEN_CACHE_FOLDER.is_dir():
+    # Only create it when it is absent: a shipped CACHE_FOLDER already carries
+    # this directory and may be read-only, and an unconditional mkdir there
+    # raises PermissionError while this module is still being imported.
+    try:
+        TIKTOKEN_CACHE_FOLDER.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        TIKTOKEN_CACHE_FOLDER = DATA_FOLDER / "tiktoken"
+        TIKTOKEN_CACHE_FOLDER.mkdir(parents=True, exist_ok=True)
 os.environ["TIKTOKEN_CACHE_DIR"] = str(TIKTOKEN_CACHE_FOLDER)
 
 

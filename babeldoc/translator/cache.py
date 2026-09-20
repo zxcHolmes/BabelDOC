@@ -13,7 +13,7 @@ from peewee import SqliteDatabase
 from peewee import TextField
 from peewee import fn  # For aggregation functions
 
-from babeldoc.const import CACHE_FOLDER
+from babeldoc.const import DATA_FOLDER
 
 logger = logging.getLogger(__name__)
 
@@ -146,9 +146,11 @@ class TranslationCache:
 
 
 def init_db(remove_exists=False):
-    CACHE_FOLDER.mkdir(parents=True, exist_ok=True)
+    # DATA_FOLDER, not CACHE_FOLDER: the cache directory can be a read-only
+    # location a packaged app ships its assets in, and this database is written.
+    DATA_FOLDER.mkdir(parents=True, exist_ok=True)
     # The current version does not support database migration, so add the version number to the file name.
-    cache_db_path = CACHE_FOLDER / "cache.v1.db"
+    cache_db_path = DATA_FOLDER / "cache.v1.db"
     logger.info(f"Initializing cache database at {cache_db_path}")
     if remove_exists and cache_db_path.exists():
         cache_db_path.unlink()
