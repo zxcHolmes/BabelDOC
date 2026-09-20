@@ -5,7 +5,7 @@ name = "BabelDOC"
 # and pip silently keeps whichever build is already there. Only [project] is
 # changed: bumpver's file_patterns and __version__ stay on the upstream value,
 # so syncing upstream does not conflict here.
-version = "0.6.4+seam.1"
+version = "0.6.4+seam.2"
 description = "Yet Another Document Translator"
 license = "AGPL-3.0"
 readme = "README.md"
