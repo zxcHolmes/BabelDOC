@@ -1,6 +1,11 @@
 [project]
 name = "BabelDOC"
-version = "0.6.4"
+# Local version identifier (PEP 440) so pip can tell this fork from upstream
+# 0.6.4 and actually reinstall on update. Without it the version strings match
+# and pip silently keeps whichever build is already there. Only [project] is
+# changed: bumpver's file_patterns and __version__ stay on the upstream value,
+# so syncing upstream does not conflict here.
+version = "0.6.4+seam.1"
 description = "Yet Another Document Translator"
 license = "AGPL-3.0"
 readme = "README.md"
